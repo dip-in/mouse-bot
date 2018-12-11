@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Mouse Bot</title>
+    <meta name="description" content="mouse bot">
+    <meta name="author" content="Dipin">
+    <style>
+        canvas {
+            border: 1px solid #d3d3d3;
+            background-color: #f1f1f1;
+        }
+    </style>
+</head>
+<body>
+<script>
+(() => {
+    const myGameHurdles = [];
+    let myGameFood = null;
+
+    const myGamePiece = new component({
+        width: 20,
+        height: 20,
+        color: "blue",
+        xPos: 10,
+        yPos: 120
+    }); 
+
+    const myGameArea = {
+        width: 200,
+        height: 200,
+        canvas: document.createElement("canvas"),
+        start: function() {
+            this.canvas.width = this.width;
+            this.canvas.height = this.height;
+            this.context = this.canvas.getContext("2d");
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+            this.frameInterval = setInterval(updateGameArea, 10);
+            //this.addHurdleInterval = setInterval(addHurdle, 1000);
+            addHurdle();
+            addHurdle();
+            addHurdle();
+            addHurdle();
+            addHurdle();
+            addHurdle();
+            addHurdle();
+            addHurdle();
+        },
+        clear: function() {
+            this.context.clearRect(0, 0, this.width, this.height);
+        },
+        addHurdles: function() {
+            myGameHurdles.forEach((hurdle) => {
+                this.context.fillStyle = hurdle.color;
+                this.context.fillRect(hurdle.x, hurdle.y, hurdle.width, hurdle.height);
+            });
+        },
+        addFood: function() {
+            if (myGameFood != null) {
+                this.context.fillStyle = myGameFood.color;
+                this.context.fillRect(myGameFood.x, myGameFood.y, myGameFood.width, myGameFood.height);
+            }
+        }
+    };       
+
+    function getRandomInt(max) {
+        return Math.floor(Math.random() * Math.floor(max));
+    }
+
+    function calculateDistance(x2, y2) {
+        const x1 = myGameFood.x;
+        const y1 = myGameFood.y;
+        const xDiff = x2 - x1;
+        const yDiff = y2 - y1;
+        const xPow = Math.pow(xDiff, 2);
+        const yPow = Math.pow(yDiff, 2);
+        const addedValue = xPow + yPow;
+        return Math.sqrt(addedValue);
+    }
+
+    function component(piece) {
+        this.width = piece.width;
+        this.height = piece.height;
+        this.x = piece.xPos;
+        this.y = piece.yPos;
+        this.prevX = this.x;
+        this.prevY = this.y;
+        this.color = piece.color;
+        this.count = 0;
+        this.coordinate = 0;
+        this.direction = 1;
+        this.collisionPoints = {};
+        this.visitedPoints = {};
+        this.nextPos = function() {
+            let minX = this.x;
+            let minY = this.y;
+            let minDistance = myGameArea.width * myGameArea.height;
+            
+            let newX = this.x + this.direction;
+            let newY = this.y;
+            let newDistance = calculateDistance(newX, newY);
+            if ( !(this.collisionPoints[newX] && this.collisionPoints[newX][newY]) ) {
+                if (this.visitedPoints[newX] && this.visitedPoints[newX][newY]) {
+                    newDistance = newDistance + this.visitedPoints[newX][newY];
+                }
+
+                if (newDistance < minDistance) {
+                    minX = newX;
+                    minY = newY; 
+                    minDistance = newDistance;
+                }
+            }
+
+            newX = this.x;
+            newY = this.y + this.direction;
+            newDistance = calculateDistance(newX, newY);
+            if ( !(this.collisionPoints[newX] && this.collisionPoints[newX][newY]) ) {
+                if (this.visitedPoints[newX] && this.visitedPoints[newX][newY]) {
+                    newDistance = newDistance + this.visitedPoints[newX][newY];
+                }
+                
+                if (newDistance < minDistance) {
+                    minX = newX;
+                    minY = newY; 
+                    minDistance = newDistance;
+                }
+            } 
+
+            newX = this.x - this.direction;
+            newY = this.y;
+            newDistance = calculateDistance(newX, newY);
+            if ( !(this.collisionPoints[newX] && this.collisionPoints[newX][newY]) ) {
+                if (this.visitedPoints[newX] && this.visitedPoints[newX][newY]) {
+                    newDistance = newDistance + this.visitedPoints[newX][newY];
+                }
+                
+                if (newDistance < minDistance) {
+                    minX = newX;
+                    minY = newY; 
+                    minDistance = newDistance;
+                }
+            } 
+
+            newX = this.x;
+            newY = this.y - this.direction;
+            newDistance = calculateDistance(newX, newY);
+            if ( !(this.collisionPoints[newX] && this.collisionPoints[newX][newY]) ) {
+                if (this.visitedPoints[newX] && this.visitedPoints[newX][newY]) {
+                    newDistance = newDistance + this.visitedPoints[newX][newY];
+                }
+                
+                if (newDistance < minDistance) {
+                    minX = newX;
+                    minY = newY; 
+                    minDistance = newDistance;
+                }
+            }
+
+            this.prevX = this.x;
+            this.prevY = this.y;
+            this.x = minX;
+            this.y = minY;
+        };
+        this.collision = function() {
+            this.collisionPoints[this.x] = this.collisionPoints[this.x] ? this.collisionPoints[this.x] : {};
+            this.collisionPoints[this.x][this.y] = true;
+            this.x = this.prevX;
+            this.y = this.prevY;
+        };
+        this.update = function() {
+            this.visitedPoints[this.x] = this.visitedPoints[this.x] ? this.visitedPoints[this.x] : {};
+            const distance = calculateDistance(this.x, this.y);
+            this.visitedPoints[this.x][this.y] = this.visitedPoints[this.x][this.y] ? this.visitedPoints[this.x][this.y] + distance : distance;
+            ctx = myGameArea.context;
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        };
+    }
+
+    function addHurdle() {
+        const gameHurdle = {
+            width: 20,
+            height: 20,
+            color: "red",
+            x: getRandomInt(myGameArea.width),
+            y: getRandomInt(myGameArea.height)
+        };
+
+        if (!detectCollision(gameHurdle, myGamePiece)) {
+            myGameHurdles.push(gameHurdle);
+        }
+    }
+
+    function createFood() {
+        const xValue = getRandomInt(myGameArea.width - myGamePiece.width);
+        const yValue = getRandomInt(myGameArea.height - myGamePiece.height);
+        const gameFood = {
+            width: 20, 
+            height: 20, 
+            color: "green",
+            x: xValue === 0 ? 1 : xValue,
+            y: yValue === 0 ? 1 : yValue
+        };
+
+        if (hurdleCollision(gameFood)) {
+            createFood();
+        } else {
+            myGameFood = gameFood;
+        }
+    }
+
+    function updateGameArea() {
+        myGameArea.clear();
+        myGameArea.addHurdles();
+        myGameArea.addFood();
+        myGamePiece.nextPos();
+
+        if (gameAreaCollision() || hurdleCollision(myGamePiece)) {
+            console.log("collision");
+            myGamePiece.collision();
+        } else if (caughtFood()) {
+        } else {
+            myGamePiece.update();
+        }
+    }
+
+    function caughtFood() {
+        if (myGamePiece.x === myGameFood.x && 
+            myGamePiece.y === myGameFood.y) {
+                myGamePiece.visitedPoints = {};
+                createFood();                
+            }
+    }
+
+    function hurdleCollision(gameComponent) {
+        const pieceTLX = gameComponent.x;
+        const pieceTLY = gameComponent.y;
+        const pieceTRX = gameComponent.x + gameComponent.width;
+        const pieceTRY = gameComponent.y;
+        const pieceBLX = gameComponent.x;
+        const pieceBLY = gameComponent.y + gameComponent.height;
+        const pieceBRX = gameComponent.x + gameComponent.width;
+        const pieceBRY = gameComponent.y + gameComponent.height;
+        let hasCollision = false;
+
+        myGameHurdles.forEach((hurdle) => {
+            const hurdleXStart = hurdle.x;
+            const hurdleXEnd = hurdle.x + hurdle.width;
+            const hurdleYStart = hurdle.y;
+            const hurdleYEnd = hurdle.y + hurdle.height;
+
+            if(( pieceTRX >= hurdleXStart &&
+                 pieceTRX <= hurdleXEnd && 
+                 pieceTRY >= hurdleYStart &&
+                 pieceTRY <= hurdleYEnd) || 
+               ( pieceBRX >= hurdleXStart &&
+                 pieceBRX <= hurdleXEnd &&
+                 pieceBRY >= hurdleYStart &&
+                 pieceBRY <= hurdleYEnd)  || 
+               ( pieceTLX >= hurdleXStart &&
+                 pieceTLX <= hurdleXEnd && 
+                 pieceTLY >= hurdleYStart &&
+                 pieceTLY <= hurdleYEnd) || 
+               ( pieceBLX >= hurdleXStart &&
+                 pieceBLX <= hurdleXEnd &&
+                 pieceBLY >= hurdleYStart &&
+                 pieceBLY <= hurdleYEnd) ) {
+                    hasCollision = true;
+            }
+        });
+        return hasCollision;
+    }
+
+    function detectCollision(newComponent, exsistingComponent) {
+        const pieceTLX = newComponent.x;
+        const pieceTLY = newComponent.y;
+        const pieceTRX = newComponent.x + newComponent.width;
+        const pieceTRY = newComponent.y;
+        const pieceBLX = newComponent.x;
+        const pieceBLY = newComponent.y + newComponent.height;
+        const pieceBRX = newComponent.x + newComponent.width;
+        const pieceBRY = newComponent.y + newComponent.height;
+
+        const hurdleXStart = exsistingComponent.x;
+        const hurdleXEnd = exsistingComponent.x + exsistingComponent.width;
+        const hurdleYStart = exsistingComponent.y;
+        const hurdleYEnd = exsistingComponent.y + exsistingComponent.height;
+
+        if(( pieceTRX >= hurdleXStart &&
+                pieceTRX <= hurdleXEnd && 
+                pieceTRY >= hurdleYStart &&
+                pieceTRY <= hurdleYEnd) || 
+            ( pieceBRX >= hurdleXStart &&
+                pieceBRX <= hurdleXEnd &&
+                pieceBRY >= hurdleYStart &&
+                pieceBRY <= hurdleYEnd)  || 
+            ( pieceTLX >= hurdleXStart &&
+                pieceTLX <= hurdleXEnd && 
+                pieceTLY >= hurdleYStart &&
+                pieceTLY <= hurdleYEnd) || 
+            ( pieceBLX >= hurdleXStart &&
+                pieceBLX <= hurdleXEnd &&
+                pieceBLY >= hurdleYStart &&
+                pieceBLY <= hurdleYEnd) ) {
+                return true;
+        }
+        return false;        
+    }
+
+    function gameAreaCollision() {
+        if ( (myGamePiece.x)  > 0 &&
+             (myGamePiece.x + 20) < myGameArea.width &&
+             (myGamePiece.y) > 0  &&
+             (myGamePiece.y + 20) < myGameArea.height) {
+            return false;
+        } 
+        return true;
+    }
+    
+
+    function gameStart() {
+        myGameArea.start();
+        createFood();
+    }
+
+    gameStart();
+})();
+</script>
+</body>
+</html>
